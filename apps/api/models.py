@@ -28,7 +28,11 @@ class User(Base):
 
         id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
         institution_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("institutions.id"), nullable=False)
-        programme_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("programmes.id"), nullable=True)
+        programme_id: Mapped[uuid.UUID | None] = mapped_column(
+    UUID(as_uuid=True),
+    ForeignKey("programmes.id", name="fk_users_programme_id"),
+    nullable=True
+)
         email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
         hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
         full_name: Mapped[str] = mapped_column(String(255), nullable=False)
