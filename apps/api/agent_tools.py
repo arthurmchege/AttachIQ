@@ -110,3 +110,42 @@ async def get_pending_units(student_id: str, db: AsyncSession) -> dict:
     ]
 
     return {"success": True, "pending_units": pending}
+
+async def get_competency_detail(unit_id: str, db: AsyncSession) -> dict:
+    """
+    Retrieves full detail for a single competency unit, including which
+    programme it belongs to. Used by SupervisorIQ to explain to the
+    supervisor what a competency unit requires before presenting evidence.
+
+    Args:
+        unit_id: The UUID (as a string) of the competency unit.
+        db: An active SQLAlchemy AsyncSession for database access.
+
+    Returns:
+        On Success: {"success": True, "code": ..., "name": ..., "programme_name": ...}
+        On Failure: {"success": False, "error": "<reason for failure>"}
+    """
+
+    # Validate the UUID format before ever touching the database
+    try:
+        unit_uuid = uuid.UUID(unit_id)
+    except ValueError:
+        return {"success": False, "error": "Invalid competency unit ID format"}
+
+    result = await db.execute(
+        select(CompetencyUnit)
+        .options(selectinload(CompetencyUnit.programme))
+        .where(CompetencyUnit.id == unit_uuid)
+    )
+    unit = result.scalar_one_or_none()
+
+    if unit is None:
+        return {"success": False, "error": "Competency unit not found"}
+
+    return {
+        "success": True,
+        "id": str(unit.id),
+        "code": unit.code,
+        "name": unit.name,
+        "programme_name": unit.programme.name,
+    }
