@@ -45,11 +45,11 @@ async def seed():
         # TODO: Create 2 student Users, then Placement
         # Placement needs student.id and supervisor.id - commit users first
 
-        # Create student users
-        student1 = User(institution_id = institution.id, email = "aaron@kiambupoly.ac.ke", hashed_password = hash_password("aaron123"), full_name = "Aaron Minish", role = UserRole.STUDENT)
+                # Create student users
+        student1 = User(institution_id = institution.id, programme_id = programme.id, email = "aaron@kiambupoly.ac.ke", hashed_password = hash_password("aaron123"), full_name = "Aaron Minish", role = UserRole.STUDENT)
         session.add(student1)
 
-        student2 = User(institution_id = institution.id, email = "lorrraine@kiambupoly.ac.ke", hashed_password = hash_password("lorraine123"), full_name = "Lorraine Sirengo", role = UserRole.STUDENT)
+        student2 = User(institution_id = institution.id, programme_id = programme.id, email = "lorrraine@kiambupoly.ac.ke", hashed_password = hash_password("lorraine123"), full_name = "Lorraine Sirengo", role = UserRole.STUDENT)
         session.add(student2)
         await session.commit()
 
