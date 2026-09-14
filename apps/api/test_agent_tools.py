@@ -1,6 +1,6 @@
 import asyncio
 from database import get_db
-from agent_tools import get_student_profile, get_pending_units
+from agent_tools import get_student_profile, get_pending_units, get_competency_detail
 async def main():
     # Get a database session manually ( not via fastAPI, Depends this time)
     async for db in get_db():
@@ -28,6 +28,18 @@ async def main():
         # Test 6: get_pending_units — syntactically valid UUID, not in the database
         result = await get_pending_units("00000000-0000-0000-0000-000000000000", db)
         print("Test 6 (Non-existent UUID):", result)
+
+        # Test 7: get_competency_detail — a real competency unit (CSC101)
+        result = await get_competency_detail("1c39bcd8-45f9-4f9d-98c0-3e3b89b75918", db)
+        print("Test 7 (CSC101 detail):", result)
+
+        # Test 8: get_competency_detail — invalid UUID format
+        result = await get_competency_detail("not-a-real-uuid", db)
+        print("Test 8 (Invalid UUID):", result)
+
+        # Test 9: get_competency_detail — syntactically valid UUID, not in the database
+        result = await get_competency_detail("00000000-0000-0000-0000-000000000000", db)
+        print("Test 9 (Non-existent UUID):", result)
 
 if __name__ == "__main__":
     asyncio.run(main())
