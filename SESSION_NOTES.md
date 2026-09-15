@@ -30,3 +30,15 @@ password verification using bcrypt.checkpw().
   - Tested: happy path (Aaron, 5 pending CSC units), invalid UUID, non-existent UUID — all pass
 - Cleaned up stray requiremnts.txt (merged into requirements.txt)
 - Next: get_competency_detail
+
+## 2026-09-15
+
+- Truncated and re-seeded dev database; documented that seed.py is not idempotent (must truncate before re-running, or UUIDs/duplicates conflict)
+- Added sample EvidenceSubmission to seed.py (Aaron, CSC101) with a placeholder
+  local-storage file_url convention: "uploads/evidence/<filename>"
+- Implemented and verified get_student_evidence(student_id, unit_id, db) in agent_tools.py
+  - Tested: happy path (Aaron's CSC101 evidence), empty result (Aaron, CSC102, no evidence),
+    invalid UUIDs, student with no placement — all pass
+- Confirmed evidence submission does NOT affect get_pending_units — units only clear once
+  an Assessment row exists, which is the correct separation between "submitted" and "assessed"
+- Next: draft_assessment, then submit_assessment
