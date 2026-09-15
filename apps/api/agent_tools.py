@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from models import User, UserRole, Placement, CompetencyUnit, Assessment
+from models import User, UserRole, Placement, CompetencyUnit, Assessment, EvidenceSubmission, Assessment
 
 async def get_student_profile(student_id: str, db: AsyncSession) -> dict:
     """
@@ -149,3 +149,55 @@ async def get_competency_detail(unit_id: str, db: AsyncSession) -> dict:
         "name": unit.name,
         "programme_name": unit.programme.name,
     }
+
+async def get_student_evidence(student_id: str, unit_id: str, db: AsyncSession) -> dict:
+    """
+    Retrieves all evidence submissions a student has made for a specific
+    competency unit, via their placement. Used by SupervisorIQ to review
+    what the student has actually submitted before asking assessment questions.
+
+    Args:
+        student_id: The UUID (as a string) of the student.
+        unit_id: The UUID (as a string) of the competency unit.
+        db: An active SQLAlchemy AsyncSession for database access.
+
+    Returns:
+        On Success: {"success": True, "evidence": [{"file_url": ..., "description": ..., "submitted_at": ...}, ...]}
+        On Failure: {"success": False, "error": "<reason for failure>"}
+    """
+
+    # Validate both UUID formats before ever touching the database
+    try:
+        student_uuid = uuid.UUID(student_id)
+        unit_uuid = uuid.UUID(unit_id)
+    except ValueError:
+        return {"success": False, "error": "Invalid student ID or competency unit ID format"}
+
+    # Find the student's placement — MVP assumption: one placement per student
+    result = await db.execute(
+        select(Placement).where(Placement.student_id == student_uuid)
+    )
+    placement = result.scalars().first()
+
+    if placement is None:
+        return {"success": False, "error": "Student has no placement"}
+
+    # Fetch evidence for that placement + competency unit combination
+    result = await db.execute(
+        select(EvidenceSubmission).where(
+            EvidenceSubmission.placement_id == placement.id,
+            EvidenceSubmission.competency_unit_id == unit_uuid,
+        )
+    )
+    submissions = result.scalars().all()
+
+    evidence = [
+        {
+            "file_url": e.file_url,
+            "description": e.description,
+            "submitted_at": e.submitted_at.isoformat() if e.submitted_at else None,
+        }
+        for e in submissions
+    ]
+
+    return {"success": True, "evidence": evidence}
