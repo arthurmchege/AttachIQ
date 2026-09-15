@@ -61,6 +61,16 @@ async def seed():
         session.add(placement2)
         await session.commit()
 
+        # Create a sample evidence submission for Aaron against CSC101
+        evidence1 = EvidenceSubmission(
+            placement_id = placement1.id,
+            competency_unit_id = competency_unit1.id,
+            file_url = "uploads/evidence/sample_poe_csc101.pdf",
+            description = "Introduction to Programming - includes a sample script Aaron wrote to automate a data-entry task at Copy Cat Group"
+        )
+        session.add(evidence1)
+        await session.commit()
+
         print("Seeding complete!")
 
 if __name__ == "__main__":
