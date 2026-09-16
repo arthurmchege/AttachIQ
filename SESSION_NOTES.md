@@ -42,3 +42,21 @@ password verification using bcrypt.checkpw().
 - Confirmed evidence submission does NOT affect get_pending_units — units only clear once
   an Assessment row exists, which is the correct separation between "submitted" and "assessed"
 - Next: draft_assessment, then submit_assessment
+
+## 2026-09-16
+
+- Implemented and verified submit_assessment(student_id, unit_id, score, comments, db) —
+  the final SupervisorIQ tool. Only tool that writes to the database.
+- Added a guard against duplicate assessments: a second submission for the same
+  placement + competency_unit returns an error rather than creating a duplicate row.
+- Verified end-to-end integration: after submit_assessment writes a real row,
+  get_pending_units correctly excludes that unit on the next call — confirms all
+  five tools are correctly reading/writing shared state.
+
+ALL FIVE SUPERVISORIQ TOOLS COMPLETE:
+get_student_profile, get_pending_units, get_competency_detail,
+get_student_evidence, draft_assessment, submit_assessment
+
+Next: wire these tools into an actual ADK Agent + Runner (Phase 5 per master plan).
+This is the part we do manually, together, slowly no shortcuts, since this is
+what gets demoed live and defended in front of judges.
