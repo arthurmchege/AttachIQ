@@ -1,6 +1,6 @@
 import asyncio
 from database import get_db
-from agent_tools import get_student_profile, get_pending_units, get_competency_detail, get_student_evidence
+from agent_tools import get_student_profile, get_pending_units, get_competency_detail, get_student_evidence, draft_assessment
 async def main():
     # Get a database session manually ( not via fastAPI, Depends this time)
     async for db in get_db():
@@ -69,6 +69,46 @@ async def main():
             db
         )
         print("Test 13 (Non-existent student):", result)
+
+        # Test 14: draft_assessment — a solid Mastery-level score
+        result = await draft_assessment(
+            "3776de48-b964-4cc0-b1e5-73bce58f6b8b",
+            "33fc6a6d-743c-4314-933f-2445dc0a004b",
+            85,
+            "Aaron completed the task independently and demonstrated strong initiative.",
+            db
+        )
+        print("Test 14 (Mastery-level draft):", result)
+
+        # Test 15: draft_assessment — a lower, Not Yet Competent score
+        result = await draft_assessment(
+            "3776de48-b964-4cc0-b1e5-73bce58f6b8b",
+            "33fc6a6d-743c-4314-933f-2445dc0a004b",
+            35,
+            "Aaron needed significant guidance and struggled with the core concept.",
+            db
+        )
+        print("Test 15 (Not Yet Competent draft):", result)
+
+        # Test 16: draft_assessment — score out of range
+        result = await draft_assessment(
+            "3776de48-b964-4cc0-b1e5-73bce58f6b8b",
+            "33fc6a6d-743c-4314-933f-2445dc0a004b",
+            150,    
+            "Should be rejected.",
+            db
+        )
+        print("Test 16 (Score out of range):", result)
+
+        # Test 17: draft_assessment — empty comments
+        result = await draft_assessment(
+            "3776de48-b964-4cc0-b1e5-73bce58f6b8b",
+            "33fc6a6d-743c-4314-933f-2445dc0a004b",
+            70,
+            "   ",
+            db
+        )
+        print("Test 17 (Empty comments):", result)
 
 if __name__ == "__main__":
     asyncio.run(main())
