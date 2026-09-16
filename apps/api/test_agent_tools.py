@@ -1,6 +1,6 @@
 import asyncio
 from database import get_db
-from agent_tools import get_student_profile, get_pending_units, get_competency_detail, get_student_evidence, draft_assessment
+from agent_tools import get_student_profile, get_pending_units, get_competency_detail, get_student_evidence, draft_assessment, submit_assessment
 async def main():
     # Get a database session manually ( not via fastAPI, Depends this time)
     async for db in get_db():
@@ -97,7 +97,7 @@ async def main():
             150,    
             "Should be rejected.",
             db
-        )
+        )   
         print("Test 16 (Score out of range):", result)
 
         # Test 17: draft_assessment — empty comments
@@ -109,6 +109,45 @@ async def main():
             db
         )
         print("Test 17 (Empty comments):", result)
+
+        # Test 18: submit_assessment — Aaron's first real assessment for CSC101
+        result = await submit_assessment(
+            "3776de48-b964-4cc0-b1e5-73bce58f6b8b",
+            "33fc6a6d-743c-4314-933f-2445dc0a004b",
+            85,
+            "Aaron completed the task independently and demonstrated strong initiative.",
+            db
+        )
+        print("Test 18 (Submit Aaron's CSC101 assessment):", result)
+
+        # Test 19: submit_assessment — attempting to submit AGAIN for the same unit should fail
+        result = await submit_assessment(
+            "3776de48-b964-4cc0-b1e5-73bce58f6b8b",
+            "33fc6a6d-743c-4314-933f-2445dc0a004b",
+            90,
+            "Trying to resubmit.",
+            db
+        )
+        print("Test 19 (Duplicate assessment, should fail):", result)
+
+        # Test 20: submit_assessment — invalid UUID format
+        result = await submit_assessment("not-a-real-uuid", "also-not-real", 70, "Should fail.", db)
+        print("Test 20 (Invalid UUIDs):", result)
+
+        # Test 21: submit_assessment — score out of range
+        result = await submit_assessment(
+            "3776de48-b964-4cc0-b1e5-73bce58f6b8b",
+            "a7be751d-8ff3-4718-8645-96fa0eb31151",  # CSC102, no assessment yet
+            120,
+            "Should fail on range.",
+            db
+        )
+        print("Test 21 (Score out of range):", result)
+
+        # Test 22: submit_assessment — a real second unit, should succeed and confirm
+        # get_pending_units now excludes CSC101 (since it's assessed) but not the others
+        result = await get_pending_units("3776de48-b964-4cc0-b1e5-73bce58f6b8b", db)
+        print("Test 22 (Pending units after CSC101 assessed, should show 4 remaining):", result)
 
 if __name__ == "__main__":
     asyncio.run(main())
