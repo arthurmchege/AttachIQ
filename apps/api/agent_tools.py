@@ -7,7 +7,7 @@ from models import User, UserRole, Placement, CompetencyUnit, Assessment, Eviden
 
 async def get_student_profile(student_id: str, db: AsyncSession) -> dict:
     """
-    Retrieves a student;s profile: name, email, programme and institution. 
+    Retrieves a student's profile: name, email, programme and institution. 
     Used by SupervisorIQ at the start of an assessment conversation to know who is being assessed.
 
     Args:
@@ -201,3 +201,71 @@ async def get_student_evidence(student_id: str, unit_id: str, db: AsyncSession) 
     ]
 
     return {"success": True, "evidence": evidence}
+
+def _get_competence_label(score: int) -> str:
+    """ Maps a 0-100 score to its CDACC competence band label."""
+    if score >= 80:
+        return "Mastery"
+    elif score >= 65:
+        return "Proficient"
+    elif score >= 50:
+        return "Competent"
+    else:
+        return "Not Yet Competent" 
+
+async def draft_assessment(student_id: str, unit_id: str, score: int, comments: str, db: AsyncSession) -> dict:
+    """
+    Packages a supervisor's assessment decision into a draft object for confirmation before it is persisted. Does NOT write to the database, that only happens in submit_assessment, once the supervisor confirms this draft accurately reflects what they observed.
+
+    The score follows the CDACC competence scale:
+        80-100: Mastery
+        65-79: Proficient
+        50-64: Competent
+        0-49: Not Yet Competent
+
+    Args:
+        student_id: The UUID (as a string) of the student.
+        unit_id: The UUID (as a string) of the competency unit.
+        score: An integer from 0 to 100 representing the supervisor's assessment score.
+        comments: THe supervisor' written comments, informed by the student's submitted evidence and their own observations.
+        db: An active SQLAlchemy AsyncSession for database access.
+
+    Returns:
+        On Success: {"success": True, "draft": {"student_id": ..., "unit_id": ..., "score": ..., "competence_label": ..., "comments": ...}}
+        On Failure: {"success": False, "error": "<reason for failure>"}
+
+    """
+
+    # Validate UUID formats before ever touching the database
+    try:
+        student_uuid = uuid.UUID(student_id)
+        unit_uuid = uuid.UUID(unit_id)
+    except ValueError:
+        return {"success": False, "error": "Invalid student ID or competency unit ID format"}
+
+    # Validate score is within the CDACC scale
+    if not isinstance(score, int) or not (0 <= score <= 100):
+        return {"success": False, "error": "Score must be an integer between 0 and 100"}
+
+    if not comments or not comments.strip():
+        return {"success": False, "error": "Comments cannot be empty"}
+
+    # Confirm the student and unit actually exist before drafting anything
+    student_result = await db.execute(select(User).where(User.id == student_uuid, User.role == UserRole.STUDENT))
+    if student_result.scalar_one_or_none() is None:
+        return {"success": False, "error": "Student not found"}
+
+    unit_result = await db.execute(select(CompetencyUnit).where(CompetencyUnit.id == unit_uuid))
+    if unit_result.scalar_one_or_none() is None:
+        return {"success": False, "error": "Competency unit not found"}
+
+    return {
+        "success": True,
+        "draft": {
+            "student_id": student_id,
+            "unit_id": unit_id,
+            "score": score,
+            "competence_label": _get_competence_label(score),
+            "comments": comments.strip(),
+        },
+    }
