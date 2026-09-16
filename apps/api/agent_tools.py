@@ -269,3 +269,96 @@ async def draft_assessment(student_id: str, unit_id: str, score: int, comments: 
             "comments": comments.strip(),
         },
     }
+
+async def submit_assessment(student_id: str, unit_id: str, score: int, comments: str, db: AsyncSession) -> dict:
+    """
+    Persists a supervisor's confirmed assessment to the database. This is
+    the only SupervisorIQ tool that writes to the database — it should only
+    be called after the supervisor has explicitly confirmed the draft
+    produced by draft_assessment.
+
+    Refuses to create a duplicate assessment if one already exists for the
+    same student's placement and competency unit — an assessment can only
+    be submitted once per unit under this MVP's workflow.
+
+    The score follows the CDACC competence scale:
+        80-100: Mastery
+        65-79:  Proficient
+        50-64:  Competent
+        0-49:   Not Yet Competent
+
+    Args:
+        student_id: The UUID (as a string) of the student.
+        unit_id: The UUID (as a string) of the competency unit.
+        score: An integer from 0 to 100 representing the supervisor's confirmed assessment.
+        comments: The supervisor's confirmed written comments.
+        db: An active SQLAlchemy AsyncSession for database access.
+
+    Returns:
+        On Success: {"success": True, "assessment": {"id": ..., "student_id": ...,
+                     "unit_id": ..., "score": ..., "competence_label": ...,
+                     "comments": ..., "assessed_at": ...}}
+        On Failure: {"success": False, "error": "<reason for failure>"}
+    """
+
+    # Validate UUID formats before ever touching the database
+    try:
+        student_uuid = uuid.UUID(student_id)
+        unit_uuid = uuid.UUID(unit_id)
+    except ValueError:
+        return {"success": False, "error": "Invalid student ID or competency unit ID format"}
+
+    # Validate score is within the CDACC scale
+    if not isinstance(score, int) or not (0 <= score <= 100):
+        return {"success": False, "error": "Score must be an integer between 0 and 100"}
+
+    if not comments or not comments.strip():
+        return {"success": False, "error": "Comments cannot be empty"}
+
+    # Confirm the student exists and has a placement
+    student_result = await db.execute(select(User).where(User.id == student_uuid, User.role == UserRole.STUDENT))
+    if student_result.scalar_one_or_none() is None:
+        return {"success": False, "error": "Student not found"}
+
+    placement_result = await db.execute(select(Placement).where(Placement.student_id == student_uuid))
+    placement = placement_result.scalars().first()
+    if placement is None:
+        return {"success": False, "error": "Student has no placement"}
+
+    # Confirm the competency unit exists
+    unit_result = await db.execute(select(CompetencyUnit).where(CompetencyUnit.id == unit_uuid))
+    if unit_result.scalar_one_or_none() is None:
+        return {"success": False, "error": "Competency unit not found"}
+
+    # Guard against duplicate assessments for the same placement + unit
+    existing_result = await db.execute(
+        select(Assessment).where(
+            Assessment.placement_id == placement.id,
+            Assessment.competency_unit_id == unit_uuid,
+        )
+    )
+    if existing_result.scalar_one_or_none() is not None:
+        return {"success": False, "error": "Assessment already submitted for this competency unit"}
+
+    assessment = Assessment(
+        placement_id=placement.id,
+        competency_unit_id=unit_uuid,
+        score=score,
+        comments=comments.strip(),
+    )
+    db.add(assessment)
+    await db.commit()
+    await db.refresh(assessment)
+
+    return {
+        "success": True,
+        "assessment": {
+            "id": str(assessment.id),
+            "student_id": student_id,
+            "unit_id": unit_id,
+            "score": assessment.score,
+            "competence_label": _get_competence_label(assessment.score),
+            "comments": assessment.comments,
+            "assessed_at": assessment.assessed_at.isoformat() if assessment.assessed_at else None,
+        },
+    }
