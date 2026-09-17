@@ -3,6 +3,10 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getToken } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -55,9 +59,6 @@ export default function SupervisorChatPage() {
         throw new Error(`Request failed (${res.status})`);
       }
 
-      // Parse the SSE stream manually: read raw bytes, decode to text,
-      // and split on the blank-line-terminated "data: {...}\n\n" frames
-      // that StreamingResponse emits.
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
@@ -68,7 +69,7 @@ export default function SupervisorChatPage() {
 
         buffer += decoder.decode(value, { stream: true });
         const frames = buffer.split("\n\n");
-        buffer = frames.pop() ?? ""; // last chunk may be incomplete, keep it
+        buffer = frames.pop() ?? "";
 
         for (const frame of frames) {
           if (!frame.startsWith("data: ")) continue;
@@ -103,14 +104,14 @@ export default function SupervisorChatPage() {
   }
 
   return (
-    <main className="flex h-screen flex-col bg-gray-50">
-      <header className="border-b border-gray-200 bg-white px-6 py-4">
-        <h1 className="text-lg font-semibold text-gray-900">SupervisorIQ</h1>
+    <main className="flex h-screen flex-col bg-muted">
+      <header className="border-b bg-background px-6 py-4">
+        <h1 className="text-lg font-semibold">SupervisorIQ</h1>
       </header>
 
       <div className="flex-1 overflow-y-auto px-6 py-4">
         {messages.length === 0 && (
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-muted-foreground">
             Start by telling SupervisorIQ which student you&apos;re ready to
             assess.
           </p>
@@ -118,43 +119,43 @@ export default function SupervisorChatPage() {
 
         <div className="space-y-4">
           {messages.map((m, i) => (
-            <div
+            <Card
               key={i}
-              className={`max-w-2xl rounded-lg px-4 py-2 text-sm whitespace-pre-wrap ${
-                m.role === "user"
-                  ? "ml-auto bg-blue-600 text-white"
-                  : m.role === "error"
-                    ? "bg-red-50 text-red-700 border border-red-200"
-                    : "bg-white border border-gray-200 text-gray-900"
-              }`}
+              className={cn(
+                "max-w-2xl py-0",
+                m.role === "user" &&
+                  "ml-auto bg-primary text-primary-foreground",
+                m.role === "error" && "border-destructive bg-destructive/10",
+              )}
             >
-              {m.content}
-            </div>
+              <CardContent className="px-4 py-2">
+                <p
+                  className={cn(
+                    "whitespace-pre-wrap text-sm",
+                    m.role === "error" && "text-destructive",
+                  )}
+                >
+                  {m.content}
+                </p>
+              </CardContent>
+            </Card>
           ))}
         </div>
         <div ref={bottomRef} />
       </div>
 
-      <form
-        onSubmit={sendMessage}
-        className="border-t border-gray-200 bg-white p-4"
-      >
+      <form onSubmit={sendMessage} className="border-t bg-background p-4">
         <div className="flex gap-2">
-          <input
-            type="text"
+          <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             disabled={sending}
             placeholder="Type your message..."
-            className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none disabled:opacity-50"
+            className="flex-1"
           />
-          <button
-            type="submit"
-            disabled={sending || !input.trim()}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-          >
+          <Button type="submit" disabled={sending || !input.trim()}>
             {sending ? "Sending..." : "Send"}
-          </button>
+          </Button>
         </div>
       </form>
     </main>
