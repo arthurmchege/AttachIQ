@@ -60,3 +60,16 @@ get_student_evidence, draft_assessment, submit_assessment
 Next: wire these tools into an actual ADK Agent + Runner (Phase 5 per master plan).
 This is the part we do manually, together, slowly no shortcuts, since this is
 what gets demoed live and defended in front of judges.
+
+## 2026-09-17
+
+- Wired SupervisorIQ ino a real HTTP endpoint: `POST /agents/chat` in `routers/agents.py`, SSE-streamed, gated to SUPERVISOR role via `get_current_user`.
+- `InMemorySessionService` created once at module scope (not per request) so conversation history survives across a supervisor's messages within a server run, it will still get lost on restart, this is a documented MVP trade-off.
+  `session_id` returned as the first SSE event; client must echo it back on follow-up messages to continue the same conversation. Missing/invalid session_id → starts fresh.
+- Fresh db session + fresh Agent built per request (mirrors test_supervisor_agent.py's per-request pattern), Runner reused against the shared session_service.
+
+-Verified via Postman: route registered correctly in /docs, auth-gated, returns clean session/error/done SSE events. Confirmed try/except around run_async() correctly catches model-layer exceptions as a graceful `error` event instead of crashing the stream.
+
+- Hit the gemini-3.5-flash free-tier wall for real over HTTP: 20 RPD, confirmed via Google AI Studio's Rate Limit dashboard (21/20 used) -**Found gemini-3.5-flash-lite gives 500 RPD on the same free tier**. 24x headroom, no billing needed. Switched supervisor_agent.py's model string to "gemini-3.5-flash-lite".
+- Verified tool-calling still works correctly on the Lite model: a real conversation correctly called get_Student_profile, get_pending_units (correctly skipped CSC101, identified CSC102 as next pending unit), get_competency_detail, and get_student_evidence (correctly reported no evidence uploaded for CSC102, did not hallucinate data). Confirms Lite is safe to use for the rest of MVP dev/testing.
+- Billing decision deferred, not needed for now given the 500 RPD headroom.
