@@ -81,8 +81,3 @@ what gets demoed live and defended in front of judges.
 **This closes the loop: the entire SupervisorIQ workflow — get_student_profile → get_pending_units → get_competency_detail → get_student_evidence → draft_assessment → submit_assessment now works end to end over a real HTTP SSE endpoint, backed by a real database write, on gemini-3.5-flash-lite (500 RPD, no billing needed).**
 
 This is the SupervisorIQ backend milestone from the 3-Week MVP Build Plan, complete.
-Week 2 Day 6 done. Per the plan, everything from here is Week 3: frontend.
-
-Next: minimal Next.js frontend — login page, supervisor chat screen (SSE-streamed,
-consuming this /agents/chat endpoint), student evidence upload screen. Per Phase 6 /
-Week 3 Day 1-2 of the build plan.
