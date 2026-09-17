@@ -12,15 +12,11 @@ Seed script fully working and verified in psql:
 ## Next step (Day 5-6, per build plan)
 
 Building POST /auth/login + get_current_user dependency.
-Currently mid-explanation on: why bcrypt needs a dedicated verify function
-(bcrypt.checkpw) instead of comparing two hash strings with ==, because
-gensalt() produces a different salt every call, so hash_password(x) run
-twice on the same password gives two DIFFERENT strings.
+Currently mid-explanation on: why bcrypt needs a dedicated verify function (bcrypt.checkpw) instead of comparing two hash strings with ==, because gensalt() produces a different salt every call, so hash_password(x) run twice on the same password gives two DIFFERENT strings.
 
 ## To resume
 
-Pick up right at: writing the /auth/login endpoint logic, starting with
-password verification using bcrypt.checkpw().
+Pick up right at: writing the /auth/login endpoint logic, starting with password verification using bcrypt.checkpw().
 
 ## 2026-09-14
 
@@ -73,3 +69,20 @@ what gets demoed live and defended in front of judges.
 - Hit the gemini-3.5-flash free-tier wall for real over HTTP: 20 RPD, confirmed via Google AI Studio's Rate Limit dashboard (21/20 used) -**Found gemini-3.5-flash-lite gives 500 RPD on the same free tier**. 24x headroom, no billing needed. Switched supervisor_agent.py's model string to "gemini-3.5-flash-lite".
 - Verified tool-calling still works correctly on the Lite model: a real conversation correctly called get_Student_profile, get_pending_units (correctly skipped CSC101, identified CSC102 as next pending unit), get_competency_detail, and get_student_evidence (correctly reported no evidence uploaded for CSC102, did not hallucinate data). Confirms Lite is safe to use for the rest of MVP dev/testing.
 - Billing decision deferred, not needed for now given the 500 RPD headroom.
+
+- **Fixed a real conversation-memory bug**: session_service.get_session() was silently failing to find previously created sessions, so every follow-up request created a brand-new session and the agent lost all prior context (asked for the student ID again on turn 3, despite a matching session_id being sent). Confirmed by comparing session_id values across requests, they were changing when they shouldn't have.
+- Fix: stop relying on session_service.get_session() lookups entirely. Track each supervisor's Session object ourselves in a plain `active_sessions: dict[user_id, Session]` at module scope in routers/agents.py. We already hold the object from when we created it, so there's nothing to "find" or get wrong.
+  - MVP tradeoff: one supervisor can only have one active assessment conversation at a time. Acceptable for now, lost on server restart either way, same as before.
+- **Re-ran the full conversation end to end after the fix, over real HTTP via Postman**:
+  student ID → correct profile/pending-unit/evidence retrieval → 2 targeted questions → draft_assessment → supervisor confirmation ("Yes, it does") → submit_assessment. Context held correctly across all turns this time.
+- **Verified directly in psql — not just trusting the agent's claim** — that a real row was written to `assessments`: score 75, correct placement_id and competency_unit_id (CSC102), comments accurately reflecting the conversation, assessed_at timestamped seconds after the agent reported success.
+- Agent correctly proceeded to offer the next pending unit (CSC103), confirming get_pending_units now excludes CSC102 post-submission second independent confirmation the write actually happened.
+
+**This closes the loop: the entire SupervisorIQ workflow — get_student_profile → get_pending_units → get_competency_detail → get_student_evidence → draft_assessment → submit_assessment now works end to end over a real HTTP SSE endpoint, backed by a real database write, on gemini-3.5-flash-lite (500 RPD, no billing needed).**
+
+This is the SupervisorIQ backend milestone from the 3-Week MVP Build Plan, complete.
+Week 2 Day 6 done. Per the plan, everything from here is Week 3: frontend.
+
+Next: minimal Next.js frontend — login page, supervisor chat screen (SSE-streamed,
+consuming this /agents/chat endpoint), student evidence upload screen. Per Phase 6 /
+Week 3 Day 1-2 of the build plan.

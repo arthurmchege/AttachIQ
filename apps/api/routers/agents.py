@@ -22,8 +22,15 @@ APP_NAME = "attachiq_supervisor"
 
 # Created once at import time and reused across every request, so that
 # conversation history survives between a supervisor's messages.
-# Swap for DatabaseSessionService post-MVP so sessions survive server restarts.
 session_service = InMemorySessionService()
+
+# Tracks each supervisor's active ADK Session object directly, keyed by user_id.
+# We hold the object ourselves rather than looking it up via
+# session_service.get_session() — that lookup was silently missing and
+# creating a fresh session on every call, wiping conversation history.
+# MVP tradeoff: one supervisor can only have one active assessment
+# conversation at a time. Lost on server restart, same as before.
+active_sessions: dict[str, "object"] = {}
 
 
 class ChatRequest(BaseModel):
@@ -37,8 +44,6 @@ async def chat_with_agent(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # MVP role-based routing (per the build plan, replacing the orchestrator):
-    # this endpoint only ever talks to SupervisorIQ, so only supervisors may call it.
     if current_user.role != UserRole.SUPERVISOR:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -47,32 +52,19 @@ async def chat_with_agent(
 
     user_id = str(current_user.id)
 
-    # Reuse an existing session if the client sent one; otherwise start fresh.
-    session = None
-    if request.session_id:
-        session = await session_service.get_session(
-            app_name=APP_NAME,
-            user_id=user_id,
-            session_id=request.session_id,
-        )
-    if session is None:
-        session = await session_service.create_session(
-            app_name=APP_NAME,
-            user_id=user_id,
-        )
+    # Reuse this supervisor's in-memory session if we have one and it matches
+    # what the client sent; otherwise start a new conversation.
+    session = active_sessions.get(user_id)
+    if session is None or (request.session_id and session.id != request.session_id):
+        session = await session_service.create_session(app_name=APP_NAME, user_id=user_id)
+        active_sessions[user_id] = session
 
-    # Fresh db session per request → fresh agent per request (same pattern as
-    # test_supervisor_agent.py). The Runner itself is cheap/stateless, so
-    # there's no cost to rebuilding it alongside the agent.
     agent = build_supervisor_agent(db)
     runner = Runner(agent=agent, app_name=APP_NAME, session_service=session_service)
-
     message = types.Content(role="user", parts=[types.Part(text=request.message)])
 
     async def event_stream():
-        # Sent first so the frontend can capture it and echo it back on the next message.
         yield f"data: {json.dumps({'type': 'session', 'session_id': session.id})}\n\n"
-
         try:
             async for event in runner.run_async(
                 user_id=user_id,
