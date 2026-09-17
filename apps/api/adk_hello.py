@@ -32,7 +32,7 @@ async def main():
     session_service=session_service,
   )
 
-  #
+  # Send a message to the agent
   user_message = types.Content(
     role="user", parts=[types.Part(text="Hello!, Who are you?")]
   )
@@ -44,7 +44,12 @@ async def main():
     new_message=user_message,
   ):
     if event.is_final_response():
-      print("AGENT SAID:", event.content.parts[0].text)
+      if event.content and event.content.parts:
+        print("AGENT SAID:", event.content.parts[0].text)
+      else:
+        print("AGENT ERROR: No response content — the model call may have failed.")
+        if hasattr(event, "error_message") and event.error_message:
+          print("Details:", event.error_message)
 
 if __name__ == "__main__":
   asyncio.run(main())
