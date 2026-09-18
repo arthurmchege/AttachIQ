@@ -5,15 +5,31 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from database import Base
 
+
+class InstitutionStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+
+    
 class Institution(Base):
     __tablename__ = "institutions"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[InstitutionStatus] = mapped_column(
+        Enum(InstitutionStatus), nullable=False, default=InstitutionStatus.PENDING
+    )
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    approved_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("platform_admins.id"), nullable=True
+    )
     # server_default=func.now() tells postgres to fill in the current timestamp when a new record is created
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     users: Mapped[list["User"]] = relationship(back_populates="institution")
+    approved_by: Mapped["PlatformAdmin | None"] = relationship()
+
 
 
 class UserRole(str, enum.Enum):
@@ -108,3 +124,13 @@ class Assessment(Base):
        score: Mapped[int] = mapped_column(nullable=False)
        comments: Mapped[str] = mapped_column(String(2000), nullable=True)
        assessed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PlatformAdmin(Base):
+    __tablename__ = "platform_admins"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+    full_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
