@@ -3,6 +3,7 @@ from routers import auth
 from routers import evidence
 from routers import agents
 from routers import institutions
+from routers import platform_admin
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -18,6 +19,7 @@ app.include_router(auth.router)
 app.include_router(evidence.router)
 app.include_router(agents.router)
 app.include_router(institutions.router)
+app.include_router(platform_admin.router)
 
 @app.get("/health")
 def health_check():
