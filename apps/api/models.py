@@ -11,12 +11,18 @@ class InstitutionStatus(str, enum.Enum):
     APPROVED = "APPROVED"
     REJECTED = "REJECTED"
 
-    
+
 class Institution(Base):
     __tablename__ = "institutions"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    tvet_registration_number: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
+    contact_person_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    phone_number: Mapped[str] = mapped_column(String(20), nullable=False)
+    email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    county: Mapped[str] = mapped_column(String(100), nullable=False)
+    town: Mapped[str] = mapped_column(String(100), nullable=False)
     status: Mapped[InstitutionStatus] = mapped_column(
         Enum(InstitutionStatus), nullable=False, default=InstitutionStatus.PENDING
     )
@@ -24,7 +30,6 @@ class Institution(Base):
     approved_by_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("platform_admins.id"), nullable=True
     )
-    # server_default=func.now() tells postgres to fill in the current timestamp when a new record is created
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     users: Mapped[list["User"]] = relationship(back_populates="institution")
