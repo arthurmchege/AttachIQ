@@ -340,6 +340,9 @@ This project does not currently specify an open-source license.
 
 **Arthur Mulunda**
 
-Email: [arthurmulunda941@gmail.com](mailto:arthurmulunda941@gmail.com)
 
-GitHub: [github.com/arthurmchege/AttachIQ](https://github.com/arthurmchege/AttachIQ)
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](http://www.linkedin.com/in/arthur-chege-b4a216375)
+[![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/arthurmchege)
+[![Gmail](https://img.shields.io/badge/Gmail-D14836?style=for-the-badge&logo=gmail&logoColor=white)](mailto:arthurmulunda941@gmail.com)
+
