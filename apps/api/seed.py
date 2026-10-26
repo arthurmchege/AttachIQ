@@ -10,7 +10,15 @@ async def seed():
     print("SEED FUNCTION STARTED")
     async with AsyncSessionLocal() as session:
         # Create an institution
-        institution = Institution(name="The Kiambu National Polytechnic")
+        institution = Institution(
+            name="The Kiambu National Polytechnic",
+            tvet_registration_number="TVET/KINAP/001",
+            contact_person_name="Jane Doe",
+            phone_number="0700000000",
+            email="jane@kiambupoly.ac.ke",
+            county="Kiambu",
+            town="Kiambu Town",
+)
         session.add(institution)
         await session.commit()
         print(f"Institution created with ID: {institution.id}")
@@ -44,7 +52,6 @@ async def seed():
 
         # TODO: Create 2 student Users, then Placement
         # Placement needs student.id and supervisor.id - commit users first
-
                 # Create student users
         student1 = User(institution_id = institution.id, programme_id = programme.id, email = "aaron@kiambupoly.ac.ke", hashed_password = hash_password("aaron123"), full_name = "Aaron Minish", role = UserRole.STUDENT)
         session.add(student1)
