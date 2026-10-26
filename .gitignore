@@ -19,6 +19,9 @@ out/
 .DS_Store
 .vscode/
 *.swp
+!.vscode/
+.vscode/*
+!.vscode/settings.json
 
 # Logs
 *.log

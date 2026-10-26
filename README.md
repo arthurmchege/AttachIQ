@@ -165,11 +165,16 @@ cd AttachIQ
 
 ```bash
 cd apps/api
-python -m venv venv
-source venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env   # fill in your database URL, JWT secret, and Gemini API key
 ```
+
+When the repository is opened in VS Code, the workspace configuration selects
+`apps/api/.venv/bin/python` automatically and adds `apps/api` to the Python
+analysis path. If the virtual environment is recreated, reload the VS Code
+window or select that interpreter again.
 
 ### Frontend
 
@@ -345,4 +350,3 @@ This project does not currently specify an open-source license.
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](http://www.linkedin.com/in/arthur-chege-b4a216375)
 [![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/arthurmchege)
 [![Gmail](https://img.shields.io/badge/Gmail-D14836?style=for-the-badge&logo=gmail&logoColor=white)](mailto:arthurmulunda941@gmail.com)
-
